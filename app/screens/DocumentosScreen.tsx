@@ -170,9 +170,8 @@ const DocCard = observer(function DocCard({
   //   downloadArquivo(numDod, nomArquivo);
   // }
 
-  const handlePressCard = (numDod: string, nomArquivo: string) => {
-
-    downloadArquivo(numDod, nomArquivo);
+  const handlePressCard = (numDoc: string, nomArquivo: string) => {
+    downloadArquivo(numDoc, nomArquivo);
   }
 
   return (
@@ -336,9 +335,9 @@ async function downloadArquivo(codigo: string, nomDoc: string) {
   const codUsu = await AsyncStorage.getItem(storageKeys.COD_USU);
   const codGuid = await AsyncStorage.getItem(storageKeys.COD_GUID);
   const token = await AsyncStorage.getItem(storageKeys.TOKEN);
-  const urlChamadaAPI = `${Config.API_URL}DocumentoPastas/baixararquivo/id/${codigo}/autor/${codUsu}/origem/documentos-ged.aspx/${await AsyncStorage.getItem('codSeqEmp')}/${codGuid}`;
-
-  const response = await fetch(urlChamadaAPI, {
+  const docUrl = `${Config.API_URL}DocumentoPastas/baixararquivo/id/${codigo}/autor/${codUsu}/origem/documentos-ged.aspx/${await AsyncStorage.getItem('codSeqEmp')}/${codGuid}`;
+  
+  const response = await fetch(docUrl, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -348,7 +347,6 @@ async function downloadArquivo(codigo: string, nomDoc: string) {
   if (!response.ok) {
     throw new Error(`Erro ao buscar o arquivo para visualização: ${response.statusText}`);
   }
-
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
