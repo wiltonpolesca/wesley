@@ -1,19 +1,20 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { storageKeys } from "app/shared/constants"
 import { observer } from "mobx-react-lite"
 import React, { ComponentType, FC, useEffect, useMemo, useRef, useState } from "react"
 import { TextInput, TextStyle, ViewStyle } from "react-native"
 import { Button, Icon, Screen, Text, TextField, TextFieldAccessoryProps } from "../components"
+import Config from "../config"
 import { useStores } from "../models"
 import { AppStackScreenProps } from "../navigators"
 import { colors, spacing } from "../theme"
-import Config from "../config"
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getHeaders } from 'app/shared/ApiHelper'
 
-interface LoginScreenProps extends AppStackScreenProps<"Login"> {}
+interface LoginScreenProps extends AppStackScreenProps<"Login"> { }
 
 export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_props) {
   const authPasswordInput = useRef<TextInput>(null)
 
- 
   const [isAuthPasswordHidden, setIsAuthPasswordHidden] = useState(true)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [attemptsCount, setAttemptsCount] = useState(0)
@@ -24,8 +25,7 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_
   useEffect(() => {
     // Here is where you could fetch credentials from keychain or storage
     // and pre-fill the form fields.
-    
-    AsyncStorage.setItem('enderecoAPI', Config.API_URL.toString());
+    AsyncStorage.setItem(storageKeys.API_ADDRESS, Config.API_URL.toString());
 
     // Return a "cleanup" function that React will run when the component unmounts
     return () => {
@@ -49,96 +49,84 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_
     setAuthPassword("")
     setAuthEmail("")
     setAuthMensagem("");
-
-   
   }
 
   async function loginUsuario() {
 
-    await getToken(authEmail, CriptografaDescriptografa(authPassword,true))
+    await getToken(authEmail, CriptografaDescriptografa(authPassword, true))
       .then((result) => {
-    
+
         if (result) {
-          
-           AsyncStorage.setItem('token', "token");
-           AsyncStorage.setItem('authEmail', "token");
-           AsyncStorage.setItem('authPassword', "token");
+          AsyncStorage.setItem(storageKeys.TOKEN, result);
+          AsyncStorage.setItem(storageKeys.AUTH_EMAIL, authEmail);
+          AsyncStorage.setItem(storageKeys.AUTH_PASSWORD, CriptografaDescriptografa(authPassword, true));
 
 
-           AsyncStorage.setItem('token', result);
-           AsyncStorage.setItem('authEmail', authEmail);
-           AsyncStorage.setItem('authPassword', CriptografaDescriptografa(authPassword,true));
-         
+          getUserData(authEmail, result)
+            .then((data) => {
+              if (data) {
+                setAuthMensagem("")
+                AsyncStorage.setItem(storageKeys.COD_USU, data.codUsu);
+                AsyncStorage.setItem(storageKeys.NOM_USU, data.nomUsu);
+                AsyncStorage.setItem(storageKeys.COD_SEQ_EMP, String(data.codSeqEmp));
+                AsyncStorage.setItem(storageKeys.NOM_EMP, data.nomEmp);
+                AsyncStorage.setItem(storageKeys.COD_GUID, data.codGuid);
+                AsyncStorage.setItem(storageKeys.COD_COLAB, String(data.codColab));
+                AsyncStorage.setItem(storageKeys.COD_LOT, String(data.codLot));
 
-           getUserData(authEmail, result)
-          .then((data) => {
-            if (data) {
-              
-              setAuthMensagem("")
-
-              AsyncStorage.setItem('codUsu', data.codUsu);
-              AsyncStorage.setItem('nomUsu', data.nomUsu);
-              AsyncStorage.setItem('codSeqEmp', data.codSeqEmp);
-              AsyncStorage.setItem('nomEmp', data.nomEmp);
-              AsyncStorage.setItem('codGuid', data.codGuid);
-              AsyncStorage.setItem('codColab', data.codColab);
-              AsyncStorage.setItem('codLot', data.codLot);
-
-              login()
+                login()
 
                 // We'll mock this with a fake token.
                 setAuthToken(String(Date.now()))
+              }
+            })
+            .catch((error) => {
+              setAuthMensagem('ERROR 1');
+              setAuthMensagem(error);
+              login()
 
-              return '';
-            }
-          })
-          .catch((error) => {
-            setAuthMensagem('ERROR 1');
-            setAuthMensagem(error);
-            login()
-  
-          });
+            });
 
 
         } else {
           setAuthMensagem('ERROR 1');
           login()
 
-        
+
         }
       })
       .catch((err) => {
         setAuthMensagem(err);
         setAuthMensagem('ERROR 1');
         login()
-    });
+      });
 
-  
- }
 
- function CriptografaDescriptografa(data: string, encrypt: boolean): string {
-  const encryptedString = "½¾¿ÀÁÂÃÄÅÆÇ‚ƒ„…†‡ˆ‰Š‹ª«¬­®¯°±²³´µ¶·¸¹ ABCDEFGHIJKLMNOPQRSTUVXYWZ0123456789_Ø%@!#&$¨*()^{}[]`.?";
-  const normalString = " ABCDEFGHIJKLMNOPQRSTUVXYWZ0123456789½¾¿ÀÁÂÃÄÅÆÇ‚ƒ„…†‡ˆ‰Š‹ª«¬­®¯°±²³´µ¶·¸¹_.%@!#&$¨*(){}[]`=Ø?";
-  
-  let returnString: string;
-  returnString= "";
-  for (let i = 0; i < data.length; i++) {
-    const char = data[i];
-    if (encrypt) {
-      const index = normalString.indexOf(char);
-      if (index !== -1) {
-        returnString += encryptedString[index];
-      }
-    } else {
-      const index = encryptedString.indexOf(char);
-      if (index !== -1) {
-        returnString += normalString[index];
-      }
-    }
   }
 
-  return returnString;
-}
+  function CriptografaDescriptografa(data: string, encrypt: boolean): string {
+    const encryptedString = "½¾¿ÀÁÂÃÄÅÆÇ‚ƒ„…†‡ˆ‰Š‹ª«¬­®¯°±²³´µ¶·¸¹ ABCDEFGHIJKLMNOPQRSTUVXYWZ0123456789_Ø%@!#&$¨*()^{}[]`.?";
+    const normalString = " ABCDEFGHIJKLMNOPQRSTUVXYWZ0123456789½¾¿ÀÁÂÃÄÅÆÇ‚ƒ„…†‡ˆ‰Š‹ª«¬­®¯°±²³´µ¶·¸¹_.%@!#&$¨*(){}[]`=Ø?";
+
+    let returnString: string;
+    returnString = "";
+    for (let i = 0; i < data.length; i++) {
+      const char = data[i];
+      if (encrypt) {
+        const index = normalString.indexOf(char);
+        if (index !== -1) {
+          returnString += encryptedString[index];
+        }
+      } else {
+        const index = encryptedString.indexOf(char);
+        if (index !== -1) {
+          returnString += normalString[index];
+        }
+      }
+    }
+
+    return returnString;
+  }
   const PasswordRightAccessory: ComponentType<TextFieldAccessoryProps> = useMemo(
     () =>
       function PasswordRightAccessory(props: TextFieldAccessoryProps) {
@@ -199,7 +187,6 @@ export const LoginScreen: FC<LoginScreenProps> = observer(function LoginScreen(_
         testID="login-button"
         tx="loginScreen.tapToLogIn"
         style={$tapButton}
-        textStyle={{lineHeight:24}}
         preset="reversed"
         onPress={loginUsuario}
       />
@@ -234,14 +221,14 @@ const $tapButton: ViewStyle = {
 }
 
 
- export const getToken = async (userID: string, accessKey: string): Promise<string | null> => {
-  const enderecoAPI: string = await  AsyncStorage.getItem('enderecoAPI') + "Acesso/security";
-  console.error(enderecoAPI);
+export const getToken = async (userID: string, accessKey: string): Promise<string | null> => {
+
+  const baseUrl = await AsyncStorage.getItem(storageKeys.API_ADDRESS);
+  const enderecoAPI = `${baseUrl}Acesso/security`;
+
   return fetch(enderecoAPI, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getHeaders(),
     body: JSON.stringify({
       UserID: userID,
       AccessKey: accessKey,
@@ -255,10 +242,9 @@ const $tapButton: ViewStyle = {
       return response.json();
     })
     .then((data) => {
-      console.error(data);
       if (data.accessToken === false) {
         console.error(1);
-         return null
+        return null
       }
 
       return data.accessToken; // Supondo que o token está no campo 'token'
@@ -274,10 +260,7 @@ export const getUserData = async (userID: string, token: string): Promise<any | 
 
   return fetch(enderecoAPI, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`, // Adicionando o token Bearer no cabeçalho
-    },
+    headers: getHeaders(token),
   })
     .then((response) => {
       if (!response.ok) {
@@ -286,7 +269,6 @@ export const getUserData = async (userID: string, token: string): Promise<any | 
       return response.json();
     })
     .then((data) => {
-      console.log(data); // Processar os dados recebidos
       return data; // Retornar os dados da API
     })
     .catch((error) => {

@@ -26,8 +26,6 @@ export const  HomeScreen: FC<DemoTabScreenProps<"Home">> =
     fetchNomeUsuario(); // Chama a função assíncrona
   }, [])
 
-  console.error(nomeUsuario);
- 
     return (
       <Screen preset="fixed" contentContainerStyle={$container}>
         <Text preset="heading" style={$title}>{translate("homeScreen.saudacao", {nome: nomeUsuario})}</Text>
